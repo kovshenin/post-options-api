@@ -11,31 +11,112 @@
 
 // Helper static functions for various fields
 class Post_Options_Fields {
-	public static function checkbox( $label = '', $description = '' ) {
-		return array( 'function' => array( 'Post_Options_Fields', '_checkbox' ), 'args' => array( 'label' => $label, 'description' => $description ) );
-	}
 	
-	public static function _checkbox( $args = array() ) {
-		?>
-			<label><input type="checkbox" name="<?php echo $args['name_attr']; ?>" value="1" <?php echo checked( (bool) $args['value_attr'] ); ?> /> <?php echo $args['label']; ?></label>
-		<?php
-			self::description( $args );		
-	}
-	
+	// Used to output description if present (for less redundancy)
 	public static function description( $args = array() ) {
 		if ( isset( $args['description'] ) && ! empty( $args['description'] ) )
 			echo "<br /><span class='description'>{$args['description']}</span>";
 	}
 	
+	// Checkbox
+	public static function checkbox( $description = '', $label = '' ) {
+		return array( 
+			'function' => array( 'Post_Options_Fields', '_checkbox' ), 
+			'args' => array( 
+				'label' => $label, 
+				'description' => $description 
+			) 
+		);
+	}
+	
+	public static function _checkbox( $args = array() ) {
+		?>
+			<label><input type="checkbox" name="<?php echo $args['name_attr']; ?>" value="1" <?php echo checked( (bool) $args['value'] ); ?> /> <?php echo $args['label']; ?></label>
+		<?php
+		self::description( $args );		
+	}
+		
+	// Regular text input
 	public static function text( $description = '', $sanitize_callback = '' ) {
-		return array( 'function' => array( 'Post_Options_Fields', '_text' ), 'sanitize_callback' => $sanitize_callback, 'args' => array( 'description' => $description ) );
+		return array( 
+			'function' => array( 'Post_Options_Fields', '_text' ), 
+			'sanitize_callback' => $sanitize_callback, 
+			'args' => array( 
+				'description' => $description 
+			) 
+		);
 	}
 	
 	public static function _text ( $args = array() ) {
 		?>
-			<input type="text" name="<?php echo $args['name_attr']; ?>" value="<?php echo esc_attr( $args['value_attr'] ); ?>" />
+			<input class="large-text" type="text" name="<?php echo $args['name_attr']; ?>" value="<?php echo esc_attr( $args['value'] ); ?>" />
 		<?php
-			self::description( $args );
+		self::description( $args );
+	}
+	
+	// Textarea input
+	public static function textarea( $description = '', $rows = 4, $sanitize_callback = '' ) {
+		return array( 
+			'function' => array( 'Post_Options_Fields', '_textarea' ), 
+			'sanitize_callback' => $sanitize_callback, 
+			'args' => array( 
+				'description' => $description, 
+				'rows' => $rows 
+			) 
+		);
+	}
+	
+	public static function _textarea( $args = array() ) {
+		?>
+			<textarea class="large-text" rows="<?php echo $args['rows']; ?>" name="<?php echo $args['name_attr']; ?>"><?php echo esc_textarea( $args['value'] ); ?></textarea>
+		<?php
+		self::description( $args );
+	}
+	
+	// Select input
+	public static function select( $description = '', $select_data = array(), $sanitize_callback = '' ) {
+		return array( 
+			'function' => array( 'Post_Options_Fields', '_select' ), 
+			'sanitize_callback' => $sanitize_callback, 
+			'args' => array( 
+				'description' => $description,
+				'select_data' => $select_data 
+			) 
+		);
+	}
+	
+	public static function _select( $args = array() ) {
+		?>
+			<select name="<?php echo $args['name_attr']; ?>">
+			<?php foreach ( $args['select_data'] as $value => $caption ): ?>
+				<option <?php echo selected( $value == $args['value'] ); ?> value="<?php echo $value; ?>"><?php echo $caption; ?></option>
+			<?php endforeach; ?>
+			</select>
+		<?php
+		self::description( $args );
+	}
+	
+	// A radio group input
+	public static function radio( $description = '', $radio_data = array(), $sanitize_callback = '' ) {
+		return array(
+			'function' => array( 'Post_Options_Fields', '_radio' ),
+			'sanitize_callback' => $sanitize_callback,
+			'args' => array(
+				'description' => $description,
+				'radio_data' => $radio_data
+			)
+		);
+	}
+	
+	public static function _radio( $args = array() ) {
+		?>
+
+			<?php foreach ( $args['radio_data'] as $value => $caption ): ?>
+				<label><input type="radio" name="<?php echo $args['name_attr']; ?>" value="<?php echo $value; ?>" <?php echo checked( $value == $args['value'] ); ?> > <?php echo $caption; ?></label><br />
+			<?php endforeach; ?>
+
+		<?php
+		self::description( $args );
 	}
 };
 
@@ -99,11 +180,11 @@ class Post_Options {
 		<style>
 			.post-options-section {
 				display: block;
-				margin-top: 8px;
+				margin-top: 12px;
 			}
 			.post-options-section .section-title {
 				display: block;
-				padding: 8px 0;
+				padding: 12px 0;
 				font-weight: bold;
 				border-bottom: solid 1px #ccc;
 			}
@@ -111,7 +192,8 @@ class Post_Options {
 			.post-option {
 				display: block;
 				padding: 8px 0;
-				border-bottom: solid 1px #ccc;
+				border-bottom: solid 1px #eee;
+				line-height: 1.5;
 			}
 			
 			.post-option label.post-option-label {
@@ -125,10 +207,16 @@ class Post_Options {
 				margin-left: 25%;
 			}
 			
-			.post-option-value span.description {
-				display: inline-block;
-				margin-top: 4px;
+			.post-option-value br+br {
+				display: none;
 			}
+			
+			.post-options-section input,
+			.post-options-section textarea,
+			.post-options-section select {
+				font-size: 12px;
+			}
+			
 		</style>
 		<?php
 		foreach ( $this->sections as $priority => $sections ) {
@@ -148,7 +236,7 @@ class Post_Options {
 								// These will be sent to the callback as arguments
 								$args = array(
 									'name_attr' => "post-options[{$option_id}]",
-									'value_attr' => $this->get_post_option( $post->ID, $option_id )
+									'value' => $this->get_post_option( $post->ID, $option_id )
 								);
 								
 								// There may be more arguments for the callback, merge them
@@ -162,7 +250,7 @@ class Post_Options {
 									call_user_func( $option['callback']['function'], $args );
 									
 							echo "</div>";
-						echo "</div>";
+						echo "<div class='clear'></div></div>";
 						
 					}
 				}
@@ -185,7 +273,20 @@ class Post_Options {
 	}
 	
 	// Register a post option
-	public function register_post_option( $id, $title, $callback, $section, $description = '', $priority = 10 ) {
+	public function register_post_option( $args ) {
+		
+		$defaults = array(
+			'id' => null,
+			'title' => 'Untitled',
+			'callback' => '',
+			'section' => '',
+			'description' => '',
+			'priority' => 10
+		);
+		
+		$args = wp_parse_args( $args, $defaults );
+		extract( $args, EXTR_SKIP );
+		
 		if ( ! isset( $this->options[$section][$priority][$id] ) && ( is_callable( $callback ) || ( is_array( $callback ) && is_callable( $callback['function'] ) ) ) ) {
 			$this->options[$section][$priority][$id] = array(
 				'title' => $title,
@@ -229,24 +330,171 @@ class Post_Options {
 add_action( 'init', create_function( '', 'global $post_options; $post_options = new Post_Options();' ) );
 add_action( 'init', 'post_options_test' );
 
+// Let's test out the above
 function post_options_test() {
 	global $post_options;
 	
-	$post_options->register_post_options_section( 'section-id', 'Section Title' );
-	$post_options->register_post_option( 'option-id', 'Option Title', array( 'function' => 'my_callback', 'args' => array( 1, 2, 3 ), 'sanitize_callback' => 'my_option_sanitize' ), 'section-id' );
-	$post_options->register_post_option( 'second-option', 'One More Option', 'my_callback', 'section-id' );
-	$post_options->register_post_option( 'third-option', 'Third through helper', Post_Options_Fields::checkbox( 'Full width layout', 'Enable full width layout for this post.' ), 'section-id' );
+	// Register two sections and add them both to the 'post' post type
+	$post_options->register_post_options_section( 'showing-off', 'Showing off various post options' );
+	$post_options->register_post_options_section( 'real-world', 'Some real world examples' );
+	$post_options->add_section_to_post_type( 'showing-off', 'post' );
+	$post_options->add_section_to_post_type( 'real-world', 'post' );
 	
-	$post_options->register_post_options_section( 'second-section', 'Section #2' );
-	$post_options->register_post_option( 'fourth-option', 'Fourth option', Post_Options_Fields::text( 'This text input is produced by a helper. The sanitize function will make it act like a slug.', 'sanitize_title' ), 'second-section' );
+	// The showing off section
+	
+	// A simple checkbox
+	$post_options->register_post_option( array( 
+		'id' => 'a-checkbox',
+		'title' => 'A checkbox',
+		'section' => 'showing-off',
+		'callback' => Post_Options_Fields::checkbox(
+			'Any sort of description can go below this checkbox and <a href="#">HTML markup</a> too!',
+			'Check me to win $500'
+		)
+	) );
+	
+	// A text input with a sanitize callback
+	$post_options->register_post_option( array( 
+		'id' => 'an-input',
+		'title' => 'A text input',
+		'section' => 'showing-off',
+		'callback' => Post_Options_Fields::text(
+			'The text in this input is saved and sanitized using the <code>sanitize_title</code> sanitize callback, so try and input some caps, numbers, symbols and spaces.',
+			'sanitize_title'
+		)
+	) );
+	
+	// A textarea
+	$post_options->register_post_option( array(
+		'id' => 'a-textarea',
+		'title' => 'A textarea for larger text or perhaps code',
+		'section' => 'showing-off',
+		'callback' => Post_Options_Fields::textarea(
+			'A textarea might be useful for some custom code or perhaps an addition to the post, like a signature or something. Note how the field title flows nicely in to several lines.'
+		)
+	) );
+	
+	// A radio group
+	$post_options->register_post_option( array( 
+		'id' => 'a-radio-group',
+		'title' => 'A radio group',
+		'section' => 'showing-off',
+		'callback' => Post_Options_Fields::radio(
+			'Radio groups accept a <code>$radio_data</code> argument where we pass in an array with values and captions for each item in the group.',
+			array(
+				'option-1' => 'The first option',
+				'option-2' => 'Another option',
+				'option-3' => 'One more option'
+			)
+		)
+	) );
+	
+	// A drop-down select box
+	$post_options->register_post_option( array(
+		'id' => 'a-select-input',
+		'title' => 'A drop-down select box',
+		'section' => 'showing-off',
+		'callback' => Post_Options_Fields::select(
+			'Select boxes are similar to radio when it comes to data input, so just provide an array of values and captions.',
+			array(
+				'option-1' => 'This is the first option',
+				'option-2' => 'Hurray for the second one',
+				'option-3' => 'There is room for a third'
+			)
+		)
+	) );
+	
+	// The real-world section
+	
+	// Hide sidebar
+	$post_options->register_post_option( array( 
+		'id' => 'hide-sidebar',
+		'title' => 'Hide sidebar',
+		'section' => 'real-world',
+		'callback' => Post_Options_Fields::checkbox(
+			'Check this to hide the right sidebar on this post.',
+			'Hide sidebar on this post'
+		)
+	) );
+	
+	// Feature this post
+	$post_options->register_post_option( array( 
+		'id' => 'featured-post',
+		'title' => 'Featured post',
+		'section' => 'real-world',
+		'callback' => Post_Options_Fields::checkbox(
+			'Check this to feature the post in the highlights section on the homepage.',
+			'This is a featured post'
+		)
+	) );
+	
+	// Hide sidebar
+	$post_options->register_post_option( array( 
+		'id' => 'hide-banners',
+		'title' => 'Hide banners',
+		'section' => 'real-world',
+		'callback' => Post_Options_Fields::checkbox(
+			'You might want to hide all your banner advertising if you would like the visitor to focus on the content of this post.',
+			'Hide all banner ads on this post'
+		)
+	) );
 
-	$post_options->add_section_to_post_type( 'section-id', 'post' );
-	$post_options->add_section_to_post_type( 'second-section', 'post' );
+	// Background image
+	// A text input with a sanitize callback
+	$post_options->register_post_option( array( 
+		'id' => 'background-image',
+		'title' => 'Background image URL',
+		'section' => 'real-world',
+		'callback' => Post_Options_Fields::text(
+			'Provide the background image URL to override on this post, useful to create outstanding landing pages without the use of templates.'
+		)
+	) );
+	
+	// A textarea
+	$post_options->register_post_option( array(
+		'id' => 'greeting-text',
+		'title' => 'Greeting text',
+		'section' => 'real-world',
+		'callback' => Post_Options_Fields::textarea(
+			'Enter some text here to show a popup greeting message box as soon as this post loads.', 3
+		)
+	) );
+	
+	// A radio group
+	$post_options->register_post_option( array( 
+		'id' => 'navigation-style',
+		'title' => 'Navigation style',
+		'section' => 'real-world',
+		'callback' => Post_Options_Fields::radio(
+			'Customize the navigation style for this page.',
+			array(
+				'option-1' => 'Default',
+				'option-2' => 'Full navigation menu and submenu',
+				'option-3' => 'Menu only, submenu on hover',
+				'option-4' => 'Submenu only'
+			)
+		)
+	) );
+	
+	// Did you know
+	$post_options->register_post_option( array(
+		'id' => 'did-you-know',
+		'title' => 'Did you know?',
+		'section' => 'real-world',
+		'callback' => 'my_callback'
+	) );
 }
 
+// This function illustrates a custom callback
 function my_callback( $args ) {
-	$value_attr = $args['value_attr'];
 	?>
-		<input type="checkbox" name="<?php echo $args['name_attr']; ?>" value="<?php echo $args['value_attr']; ?>" <?php echo checked( (bool) $value_attr ); ?> /><br />
+	That you can provide your own callback to the post option registration function and that the above are just helpers to spare you time and money?
+	<strong>Seriously</strong>, I can do whatever I want here, and even provide a sanitize callback for validation. Want proof? Check out this <code>print_r</code>
+	call to the arguments provided to this callback function:<br />
+	
+	<pre style="margin: 10px;"><?php echo htmlspecialchars( print_r( $args, true ) ); ?></pre>
+	
+	Go ahead and set it to whatever you like and see how it affects the value:<br />
+	<input class="large-text" type="text" name="<?php echo $args['name_attr']; ?>" value="<?php echo esc_attr( $args['value'] ); ?>" />
 	<?php
 }
