@@ -26,6 +26,17 @@ class Post_Options_Fields {
 		if ( isset( $args['description'] ) && ! empty( $args['description'] ) )
 			echo "<br /><span class='description'>{$args['description']}</span>";
 	}
+	
+	public static function text( $description = '', $sanitize_callback = '' ) {
+		return array( 'function' => array( 'Post_Options_Fields', '_text' ), 'sanitize_callback' => $sanitize_callback, 'args' => array( 'description' => $description ) );
+	}
+	
+	public static function _text ( $args = array() ) {
+		?>
+			<input type="text" name="<?php echo $args['name_attr']; ?>" value="<?php echo esc_attr( $args['value_attr'] ); ?>" />
+		<?php
+			self::description( $args );
+	}
 };
 
 // The post options operations
@@ -112,6 +123,11 @@ class Post_Options {
 			.post-option .post-option-value {
 				display: block;
 				margin-left: 25%;
+			}
+			
+			.post-option-value span.description {
+				display: inline-block;
+				margin-top: 4px;
 			}
 		</style>
 		<?php
@@ -219,13 +235,13 @@ function post_options_test() {
 	$post_options->register_post_options_section( 'section-id', 'Section Title' );
 	$post_options->register_post_option( 'option-id', 'Option Title', array( 'function' => 'my_callback', 'args' => array( 1, 2, 3 ), 'sanitize_callback' => 'my_option_sanitize' ), 'section-id' );
 	$post_options->register_post_option( 'second-option', 'One More Option', 'my_callback', 'section-id' );
-	$post_options->register_post_option( 'third-option', 'Third through helper', Post_Options_Fields::checkbox('Full width layout', 'Enable full width layout for this post.'), 'section-id' );
+	$post_options->register_post_option( 'third-option', 'Third through helper', Post_Options_Fields::checkbox( 'Full width layout', 'Enable full width layout for this post.' ), 'section-id' );
+	
+	$post_options->register_post_options_section( 'second-section', 'Section #2' );
+	$post_options->register_post_option( 'fourth-option', 'Fourth option', Post_Options_Fields::text( 'This text input is produced by a helper. The sanitize function will make it act like a slug.', 'sanitize_title' ), 'second-section' );
 
 	$post_options->add_section_to_post_type( 'section-id', 'post' );
-}
-
-function my_option_sanitize( $option ) {
-	return $option . '123';
+	$post_options->add_section_to_post_type( 'second-section', 'post' );
 }
 
 function my_callback( $args ) {
