@@ -540,7 +540,7 @@ function post_options_test() {
 		) )
 	) );
 	
-	// Hide sidebar
+	// Hide banners
 	$post_options->register_post_option( array( 
 		'id' => 'hide-banners',
 		'title' => 'Hide banners',
@@ -552,7 +552,6 @@ function post_options_test() {
 	) );
 
 	// Background image
-	// A text input with a sanitize callback
 	$post_options->register_post_option( array( 
 		'id' => 'background-image',
 		'title' => 'Background image URL',
@@ -604,6 +603,33 @@ function post_options_test() {
 		'section' => 'real-world',
 		'callback' => 'page_layout_callback'
 	) );
+		
+	// Mood Example
+	$post_options->register_post_option( array(
+		'id' => 'mood',
+		'title' => 'Mood',
+		'section' => 'real-world',
+		'callback' => Post_Options_Fields::select( array(
+			'description' => 'How did you feel when writing this post?',
+			'select_data' => array(
+				'Happy' => 'Happy',
+				'Sad' => 'Sad',
+				'Disappointed' => 'Disappointed',
+				'Awful' => 'Awful'
+			)
+		) )
+	) );
+	
+	add_filter( 'the_content', 'my_mood_filter' );
+}
+
+// A filter to the_content to show off the current mood
+function my_mood_filter( $content ) {
+	global $post_options, $post;
+	$mood = $post_options->get_post_option( $post->ID, 'mood' );
+	if ( ! empty( $mood ) )
+		$content .= "<p><strong>Mood</strong>: {$mood}</p>";
+	return $content;
 }
 
 // This function illustrates a custom callback
