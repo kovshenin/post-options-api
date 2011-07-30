@@ -9,7 +9,20 @@
  * License: GPL2
  **/
 
-// Helper static functions for various fields
+/**
+ * Post Options Fields
+ *
+ * This is a helper class with static methods that can be used in
+ * callbacks when registering post options. These are used to create
+ * simple fields like text boxes, textareas, checkboxes and more. If
+ * something more customizable is needed, you can always run your own
+ * callback function.
+ *
+ * Methods come in pairs, the creator function (factory) and the actual callback.
+ * The factory function returns the callback in an array compatible with
+ * the post options API.
+ *
+ **/
 class Post_Options_Fields {
 	
 	// Used to output description if present (for less redundancy)
@@ -18,7 +31,12 @@ class Post_Options_Fields {
 			echo "<br /><span class='description'>{$args['description']}</span>";
 	}
 	
-	// Checkbox
+	/**
+	 * Checkbox
+	 *
+	 * Give this checkbox a label and a description through
+	 * the arguments array for the best look and feel.
+	 **/
 	public static function checkbox( $args ) {
 
 		$defaults = array(
@@ -33,7 +51,6 @@ class Post_Options_Fields {
 			'args' => $args
 		);
 	}
-	
 	public static function _checkbox( $args = array() ) {
 		?>
 			<label><input type="checkbox" name="<?php echo $args['name_attr']; ?>" value="1" <?php echo checked( (bool) $args['value'] ); ?> /> <?php echo $args['label']; ?></label>
@@ -41,7 +58,12 @@ class Post_Options_Fields {
 		self::description( $args );		
 	}
 		
-	// Regular text input
+	/**
+	 * Text Input
+	 *
+	 * Factory function accepts a description and a
+	 * sanitize_callback if you need some validation.
+	 **/
 	public static function text( $args ) {
 		
 		$defaults = array(
@@ -60,7 +82,6 @@ class Post_Options_Fields {
 			) 
 		);
 	}
-	
 	public static function _text ( $args = array() ) {
 		?>
 			<input class="large-text" type="text" name="<?php echo $args['name_attr']; ?>" value="<?php echo esc_attr( $args['value'] ); ?>" />
@@ -68,7 +89,12 @@ class Post_Options_Fields {
 		self::description( $args );
 	}
 	
-	// Textarea input
+	/**
+	 * Textarea (multi-line text)
+	 *
+	 * Function accepts a description, rows and
+	 * a sanitize_callback for validation.
+	 **/
 	public static function textarea( $args ) {
 
 		$defaults = array(
@@ -89,7 +115,6 @@ class Post_Options_Fields {
 			) 
 		);
 	}
-	
 	public static function _textarea( $args = array() ) {
 		?>
 			<textarea class="large-text" rows="<?php echo $args['rows']; ?>" name="<?php echo $args['name_attr']; ?>"><?php echo esc_textarea( $args['value'] ); ?></textarea>
@@ -97,8 +122,15 @@ class Post_Options_Fields {
 		self::description( $args );
 	}
 	
-	// Select input
-	public static function select( $args ) {
+	/**
+	 * Drop-down Select
+	 *
+	 * Give it a description and a select_data array where
+	 * the array keys are the values of the options and the array
+	 * values are the captions. The sanitize_callback argument
+	 * is available too.
+	 **/
+	public static function select( $args ) { 
 		
 		$defaults = array(
 			'description' => '',
@@ -118,7 +150,6 @@ class Post_Options_Fields {
 			) 
 		);
 	}
-	
 	public static function _select( $args = array() ) {
 		?>
 			<select name="<?php echo $args['name_attr']; ?>">
@@ -130,7 +161,12 @@ class Post_Options_Fields {
 		self::description( $args );
 	}
 	
-	// A radio group input
+	/**
+	 * Radio Group
+	 *
+	 * Works very much like the drop-down select box. The radio
+	 * data is passed in the radio_data array. Rest is the same.
+	 **/
 	public static function radio( $args ) {
 
 		$defaults = array(
@@ -151,7 +187,6 @@ class Post_Options_Fields {
 			)
 		);
 	}
-	
 	public static function _radio( $args = array() ) {
 		?>
 
@@ -164,46 +199,73 @@ class Post_Options_Fields {
 	}
 };
 
-// The post options operations
+/**
+ *
+ * Post Options Class
+ *
+ * All the post options logic and functions are implemented here
+ * and wrapper functions with simpler names could then be created
+ * outside the class for convenience and simplicity.
+ *
+ * This class handles registration of sections and post options to
+ * sections, sections to post types assignment and the actual
+ * metabox UI and the post meta IO operations.
+ *
+ **/
 class Post_Options {
+	
 	private $sections = array();
 	private $options = array();
 	private $post_types = array();
 	
+	// Runs during 'init'
 	function __construct() {
 		add_action( 'admin_init', array( &$this, '_admin_init' ) );
 	}
 	
+	// Runs during 'admin_init'
 	function _admin_init() {
+		
+		// Adds the metabox for each post type
 		foreach ( $this->post_types as $post_type => $sections )
 			add_meta_box( 'post-options', 'Post Options', array( &$this, '_meta_box_post_options' ), 'post', 'normal', 'default', array( 'post_type' => $post_type ) );
 			
+		// Register the save_post action (for all post types)
 		add_action( 'save_post', array( &$this, '_save_post' ), 10, 2 );
 	}
 	
+	// Runs during 'save_post'
 	function _save_post( $post_id, $post ) {
+		
 		// Don't save revisions and auto-drafts
 		if ( wp_is_post_revision( $post_id ) || $post->post_status == 'auto-draft' )
 			return;
-			
+		
+		// The following magic 4x foreach loop requires some refactoring and performance tuning.
 		$post_type = $post->post_type;
 		if ( isset( $this->post_types[$post_type] ) ) {
 			$post_type_sections = $this->post_types[$post_type];
 			foreach ( $this->sections as $priority => $sections ) {
 				foreach ( $sections as $section_id => $section ) {
+					
+					// Don't output if the section is not registered for this post_type
 					if ( ! in_array( $section_id, $post_type_sections ) ) continue;
 					
 					$section_options = $this->options[$section_id];
-
+					
+					// Loop through the options in the section.
 					foreach ( $section_options as $priority => $options ) {
 						foreach ( $options as $option_id => $option ) {
+							
+							// Read the POST data, call the sanitize functions if they exist.
 							if ( isset( $_POST['post-options'][$option_id] ) ) {
 								$value = $_POST['post-options'][$option_id];
 								if ( isset( $option['callback']['sanitize_callback'] ) && is_callable( $option['callback']['sanitize_callback'] ) )
 									$value = call_user_func( $option['callback']['sanitize_callback'], $value );
 									
-								// Update the post meta
+								// Update the post meta for this option.
 								update_post_meta( $post_id, $option_id, $value );
+								
 							} else {
 								
 								// Delete the post meta otherwise (for checkboxes)
@@ -211,16 +273,17 @@ class Post_Options {
 							}
 						}
 					}
-				}
+				} // Braces madness, eh? ;)
 			}
 		}
 	}
 	
-	// The meta box, oh the meta box!
+	// The meta box, oh the meta box! Runs for the meta box contents.
 	function _meta_box_post_options( $post ) {
 		$post_type = $post->post_type;
 		$post_type_sections = $this->post_types[$post_type];
 		?>
+		<!-- Put this in a more decent place when done with styling. -->
 		<style>
 			.post-options-section {
 				display: block;
@@ -263,16 +326,21 @@ class Post_Options {
 			
 		</style>
 		<?php
+		
+		// This is that magic four-foreach loop again.
 		foreach ( $this->sections as $priority => $sections ) {
 			foreach ( $sections as $section_id => $section ) {
 				if ( ! in_array( $section_id, $post_type_sections ) ) continue;
 				$section_options = $this->options[$section_id];
 				
+				// Print the section heading.
 				echo "<div id='post-options-{$section_id}' class='post-options-section'><div class='section-title'>{$section['title']}</div>";
 				
+				// Loop through the options.
 				foreach ( $section_options as $priority => $options ) {
 					foreach ( $options as $option_id => $option ) {
 						
+						// Print the option title
 						echo "<div class='post-option option-{$option_id}'>";
 							echo "<label class='post-option-label'>{$option['title']}</label>";
 							echo "<div class='post-option-value'>";
@@ -287,19 +355,19 @@ class Post_Options {
 								if ( isset( $option['callback']['args'] ) && is_array( $option['callback']['args'] ) )
 									$args = array_merge( $args, $option['callback']['args'] );
 								
-								// Fire the callback.
+								// Fire the callback (prints the option value part).
 								if ( is_callable( $option['callback'] ) )
 									call_user_func( $option['callback'], $args );
 								elseif ( is_callable( $option['callback']['function'] ) )
 									call_user_func( $option['callback']['function'], $args );
 									
 							echo "</div>";
-						echo "<div class='clear'></div></div>";
+						echo "<div class='clear'></div></div>"; // Second div closes .post-option
 						
 					}
 				}
 				
-				echo "</div>";
+				echo "</div>"; // Closes .post-options-section
 			}
 		}
 	}
