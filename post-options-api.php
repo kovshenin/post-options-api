@@ -37,7 +37,7 @@ class Post_Options_Fields {
 	 * Give this checkbox a label and a description through
 	 * the arguments array for the best look and feel.
 	 **/
-	public static function checkbox( $args ) {
+	public static function checkbox( $args = array() ) {
 
 		$defaults = array(
 			'label' => '',
@@ -64,7 +64,7 @@ class Post_Options_Fields {
 	 * Factory function accepts a description and a
 	 * sanitize_callback if you need some validation.
 	 **/
-	public static function text( $args ) {
+	public static function text( $args = array() ) {
 		
 		$defaults = array(
 			'description' => '',
@@ -95,7 +95,7 @@ class Post_Options_Fields {
 	 * Function accepts a description, rows and
 	 * a sanitize_callback for validation.
 	 **/
-	public static function textarea( $args ) {
+	public static function textarea( $args = array() ) {
 
 		$defaults = array(
 			'description' => '',
@@ -130,7 +130,7 @@ class Post_Options_Fields {
 	 * values are the captions. The sanitize_callback argument
 	 * is available too.
 	 **/
-	public static function select( $args ) { 
+	public static function select( $args = array() ) { 
 		
 		$defaults = array(
 			'description' => '',
@@ -167,7 +167,7 @@ class Post_Options_Fields {
 	 * Works very much like the drop-down select box. The radio
 	 * data is passed in the radio_data array. Rest is the same.
 	 **/
-	public static function radio( $args ) {
+	public static function radio( $args = array() ) {
 
 		$defaults = array(
 			'description' => '',
