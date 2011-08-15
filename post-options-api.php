@@ -3,7 +3,7 @@
  * Plugin Name: Post Options API
  * Plugin URI: http://github.com/kovshenin/post-options-api
  * Description: Post Options API plugin, test driving.
- * Version: 1.0
+ * Version: 1.1
  * Author: kovshenin
  * Author URI: http://theme.fm
  * License: GPL2
@@ -297,18 +297,7 @@ class Post_Options {
 		
 		?>
 		<!-- Put this in a more decent place when done with styling. -->
-		<style>
-			.post-options-section {
-				display: block;
-				margin-top: 12px;
-			}
-			.post-options-section .section-title {
-				display: block;
-				padding: 12px 0;
-				font-weight: bold;
-				border-bottom: solid 1px #ccc;
-			}
-			
+		<style>			
 			.post-option {
 				display: block;
 				padding: 8px 0;
@@ -331,9 +320,9 @@ class Post_Options {
 				display: none;
 			}
 			
-			.post-options-section input,
-			.post-options-section textarea,
-			.post-options-section select {
+			.post-option input,
+			.post-option textarea,
+			.post-option select {
 				font-size: 12px;
 			}
 			
@@ -473,7 +462,7 @@ function post_options_test() {
 	) );
 	
 	// A textarea
-	/*$post_options->register_post_option( array(
+	$post_options->register_post_option( array(
 		'id' => 'a-textarea',
 		'title' => 'A textarea for larger text or perhaps code',
 		'section' => 'showing-off',
@@ -510,12 +499,12 @@ function post_options_test() {
 				'option-3' => 'There is room for a third'
 			)
 		) )
-	) );*/
+	) );
 	
 	// The real-world section
 	
 	// Hide sidebar
-	/*$post_options->register_post_option( array( 
+	$post_options->register_post_option( array( 
 		'id' => 'hide-sidebar',
 		'title' => 'Hide sidebar',
 		'section' => 'real-world',
@@ -590,7 +579,7 @@ function post_options_test() {
 		'title' => 'Did you know?',
 		'section' => 'real-world',
 		'callback' => 'my_callback'
-	) );*/
+	) );
 	
 	// Page Layout
 	$post_options->register_post_option( array(
