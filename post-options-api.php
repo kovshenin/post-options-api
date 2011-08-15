@@ -221,22 +221,39 @@ class Post_Options {
 	// Runs during 'init'
 	function __construct() {
 		add_action( 'admin_init', array( &$this, '_admin_init' ) );
+		add_action( 'submitpage_box', array( &$this, '_add_nonce_field' ) );
+		add_action( 'submitpost_box', array( &$this, '_add_nonce_field' ) );
 	}
 	
 	// Runs during 'admin_init' doh!
 	function _admin_init() {
 		
+		// Debug voodoo
+		//add_action('all', create_function('', 'var_dump(current_filter());'));
+		
 		// Adds the metabox for each post type
 		foreach ( $this->post_types as $post_type => $sections )
 			foreach ( $sections as $section_id )
-				add_meta_box( 'post-options-' . $section_id, $this->sections[$section_id]['title'], array( &$this, '_meta_box_post_options' ), 'post', 'normal', 'default', array( 'section_id' => $section_id ) );
+				add_meta_box( 'post-options-' . $section_id, $this->sections[$section_id]['title'], array( &$this, '_meta_box_post_options' ), $post_type, 'normal', 'default', array( 'section_id' => $section_id ) );
 			
 		// Register the save_post action (for all post types)
 		add_action( 'save_post', array( &$this, '_save_post' ), 10, 2 );
 	}
 	
+	// Security check on edit pages
+	function _add_nonce_field() {
+		global $post;
+		if ( $post )
+			wp_nonce_field( 'edit_post_options_' . $post->ID , '_post_options_nonce', false );
+	}
+	
 	// Runs during 'save_post'
 	function _save_post( $post_id, $post ) {
+		
+		// Security check (nonce)
+		if ( ! isset( $_POST['_post_options_nonce'] ) || ! wp_verify_nonce( $_POST['_post_options_nonce'], 'edit_post_options_' . $post->ID ) )
+		      return;
+		//check_admin_referer( '_post_options_nonce', 'aedit_post_options_' . $post->ID );
 		
 		// Don't save revisions and auto-drafts
 		if ( wp_is_post_revision( $post_id ) || $post->post_status == 'auto-draft' )
@@ -281,9 +298,9 @@ class Post_Options {
 			} // foreach (priority, options)
 		} // foreach post type sections	
 	}
-	
+		
 	// The meta box, oh the meta box! Runs for the meta box contents.
-	function _meta_box_post_options( $post, $metabox ) {
+	function _meta_box_post_options( $post, $metabox ) {		
 		$args = $metabox['args'];
 		$section_id = $args['section_id'];
 		
@@ -375,7 +392,13 @@ class Post_Options {
 		return false;
 	}
 	
-	// Register a post option
+	/*
+	 * Register Post Option
+	 *
+	 * Registers a new post option that can then be used in different
+	 * sections for different post types. Each post option is also interpreted
+	 * during post type save so you don't have to do the saving, we do it for you.
+	 */
 	public function register_post_option( $args ) {
 		
 		$defaults = array(
@@ -390,6 +413,9 @@ class Post_Options {
 		$args = wp_parse_args( $args, $defaults );
 		extract( $args, EXTR_SKIP );
 		
+		// Madness eh? Well $this->options is an array of sections, each array of sections is an array
+		// of priorities and each array of priorities is an array of options, ex:
+		// $this->options[section][priority][option_id] = array of options, sorry! :)
 		if ( ! isset( $this->options[$section][$priority][$id] ) && ( is_callable( $callback ) || ( is_array( $callback ) && is_callable( $callback['function'] ) ) ) ) {
 			$this->options[$section][$priority][$id] = array(
 				'title' => $title,
@@ -402,7 +428,13 @@ class Post_Options {
 		return false;
 	}
 	
-	// Add section to post type
+	/*
+	 * Add Section to Post Type
+	 * 
+	 * Registers a given section_id to a given post type slug (post, page, etc)
+	 * so this function makes the section actually appear as a meta box on
+	 * the edit screen.
+	 */
 	public function add_section_to_post_type( $section_id, $post_type ) {
 		if ( $this->section_exists( $section_id ) && ( ! isset( $this->post_types[$post_type] ) || ! in_array( $section_id, $this->post_types[$post_type] ) ) ) {
 			$this->post_types[$post_type][] = $section_id;
@@ -413,11 +445,11 @@ class Post_Options {
 	}
 	
 	// Returns true if given section_id exists
-	function section_exists( $section_id ) {
+	private function section_exists( $section_id ) {
 		return array_key_exists( $section_id, $this->sections );
 	}
 		
-	// Get post option
+	// Get post option (just a wrapper around get_post_meta)
 	public function get_post_option( $post_id, $option_id ) {
 		return get_post_meta( $post_id, $option_id, true );
 	}
@@ -435,6 +467,7 @@ function post_options_test() {
 	$post_options->register_post_options_section( 'real-world', 'Some real world examples' );
 	$post_options->add_section_to_post_type( 'showing-off', 'post' );
 	$post_options->add_section_to_post_type( 'real-world', 'post' );
+	$post_options->add_section_to_post_type( 'real-world', 'page' );
 	
 	// The showing off section
 	
