@@ -223,12 +223,13 @@ class Post_Options {
 		add_action( 'admin_init', array( &$this, '_admin_init' ) );
 	}
 	
-	// Runs during 'admin_init'
+	// Runs during 'admin_init' doh!
 	function _admin_init() {
 		
 		// Adds the metabox for each post type
 		foreach ( $this->post_types as $post_type => $sections )
-			add_meta_box( 'post-options', 'Post Options', array( &$this, '_meta_box_post_options' ), 'post', 'normal', 'default', array( 'post_type' => $post_type ) );
+			foreach ( $sections as $section_id )
+				add_meta_box( 'post-options-' . $section_id, $this->sections[$section_id]['title'], array( &$this, '_meta_box_post_options' ), 'post', 'normal', 'default', array( 'section_id' => $section_id ) );
 			
 		// Register the save_post action (for all post types)
 		add_action( 'save_post', array( &$this, '_save_post' ), 10, 2 );
@@ -241,47 +242,59 @@ class Post_Options {
 		if ( wp_is_post_revision( $post_id ) || $post->post_status == 'auto-draft' )
 			return;
 		
-		// The following magic 4x foreach loop requires some refactoring and performance tuning.
+		// If there are no sections in the current post type live no longer!
 		$post_type = $post->post_type;
-		if ( isset( $this->post_types[$post_type] ) ) {
-			$post_type_sections = $this->post_types[$post_type];
-			foreach ( $this->sections as $priority => $sections ) {
-				foreach ( $sections as $section_id => $section ) {
-					
-					// Don't output if the section is not registered for this post_type
-					if ( ! in_array( $section_id, $post_type_sections ) ) continue;
-					
-					$section_options = $this->options[$section_id];
-					
-					// Loop through the options in the section.
-					foreach ( $section_options as $priority => $options ) {
-						foreach ( $options as $option_id => $option ) {
-							
-							// Read the POST data, call the sanitize functions if they exist.
-							if ( isset( $_POST['post-options'][$option_id] ) ) {
-								$value = $_POST['post-options'][$option_id];
-								if ( isset( $option['callback']['sanitize_callback'] ) && is_callable( $option['callback']['sanitize_callback'] ) )
-									$value = call_user_func( $option['callback']['sanitize_callback'], $value );
-									
-								// Update the post meta for this option.
-								update_post_meta( $post_id, $option_id, $value );
-								
-							} else {
-								
-								// Delete the post meta otherwise (for checkboxes)
-								delete_post_meta( $post_id, $option_id );
-							}
-						}
+		if ( ! isset( $this->post_types[$post_type] ) )
+			return;
+		
+		// Get the sections for the post type	
+		$post_type_sections = $this->post_types[$post_type];
+		
+		foreach ( $post_type_sections as $section_id ) {
+			
+			// Skip inexisting sections
+			if ( ! $this->section_exists( $section_id ) )
+				continue;
+			
+			$section = $this->sections[$section_id];
+			$section_options = $this->options[$section_id];
+			
+			// Loop through the options in the section (priority voodoo).
+			foreach ( $section_options as $priority => $options ) {
+				foreach ( $options as $option_id => $option ) {
+
+					// Read the POST data, call the sanitize functions if they exist.
+					if ( isset( $_POST['post-options'][$option_id] ) ) {
+						$value = $_POST['post-options'][$option_id];
+						if ( isset( $option['callback']['sanitize_callback'] ) && is_callable( $option['callback']['sanitize_callback'] ) )
+							$value = call_user_func( $option['callback']['sanitize_callback'], $value );
+
+						// Update the post meta for this option.
+						update_post_meta( $post_id, $option_id, $value );
+
+					} else {
+
+						// Delete the post meta otherwise (for checkboxes)
+						delete_post_meta( $post_id, $option_id );
 					}
-				} // Braces madness, eh? ;)
-			}
-		}
+				} // foreach (option)
+			} // foreach (priority, options)
+		} // foreach post type sections	
 	}
 	
 	// The meta box, oh the meta box! Runs for the meta box contents.
-	function _meta_box_post_options( $post ) {
-		$post_type = $post->post_type;
-		$post_type_sections = $this->post_types[$post_type];
+	function _meta_box_post_options( $post, $metabox ) {
+		$args = $metabox['args'];
+		$section_id = $args['section_id'];
+		
+		if ( ! $this->section_exists( $section_id ) )
+			return false;
+
+		$section = $this->sections[$section_id];
+		
+		// Sort the array by keys (priority)
+		ksort( $this->options[$section_id] );
+		
 		?>
 		<!-- Put this in a more decent place when done with styling. -->
 		<style>
@@ -327,55 +340,44 @@ class Post_Options {
 		</style>
 		<?php
 		
-		// This is that magic four-foreach loop again.
-		foreach ( $this->sections as $priority => $sections ) {
-			foreach ( $sections as $section_id => $section ) {
-				if ( ! in_array( $section_id, $post_type_sections ) ) continue;
-				$section_options = $this->options[$section_id];
-				
-				// Print the section heading.
-				echo "<div id='post-options-{$section_id}' class='post-options-section'><div class='section-title'>{$section['title']}</div>";
-				
-				// Loop through the options.
-				foreach ( $section_options as $priority => $options ) {
-					foreach ( $options as $option_id => $option ) {
+		$section_options = $this->options[$section_id];
 						
-						// Print the option title
-						echo "<div class='post-option option-{$option_id}'>";
-							echo "<label class='post-option-label'>{$option['title']}</label>";
-							echo "<div class='post-option-value'>";
-								
-								// These will be sent to the callback as arguments
-								$args = array(
-									'name_attr' => "post-options[{$option_id}]",
-									'value' => $this->get_post_option( $post->ID, $option_id )
-								);
-								
-								// There may be more arguments for the callback, merge them
-								if ( isset( $option['callback']['args'] ) && is_array( $option['callback']['args'] ) )
-									$args = array_merge( $args, $option['callback']['args'] );
-								
-								// Fire the callback (prints the option value part).
-								if ( is_callable( $option['callback'] ) )
-									call_user_func( $option['callback'], $args );
-								elseif ( is_callable( $option['callback']['function'] ) )
-									call_user_func( $option['callback']['function'], $args );
-									
-							echo "</div>";
-						echo "<div class='clear'></div></div>"; // Second div closes .post-option
+		// Loop through the options.
+		foreach ( $section_options as $priority => $options ) {
+			foreach ( $options as $option_id => $option ) {
+
+				// Print the option title
+				echo "<div class='post-option option-{$option_id}'>";
+					echo "<label class='post-option-label'>{$option['title']}</label>";
+					echo "<div class='post-option-value'>";
 						
-					}
-				}
+						// These will be sent to the callback as arguments
+						$args = array(
+							'name_attr' => "post-options[{$option_id}]",
+							'value' => $this->get_post_option( $post->ID, $option_id )
+						);
+						
+						// There may be more arguments for the callback, merge them
+						if ( isset( $option['callback']['args'] ) && is_array( $option['callback']['args'] ) )
+							$args = array_merge( $args, $option['callback']['args'] );
+						
+						// Fire the callback (prints the option value part).
+						if ( is_callable( $option['callback'] ) )
+							call_user_func( $option['callback'], $args );
+						elseif ( is_callable( $option['callback']['function'] ) )
+							call_user_func( $option['callback']['function'], $args );
+							
+					echo "</div>";
+				echo "<div class='clear'></div></div>"; // Second div closes .post-option
 				
-				echo "</div>"; // Closes .post-options-section
 			}
-		}
+		}		
 	}
 	
 	// Register a post options section
-	public function register_post_options_section( $id, $title, $priority = 10 ) {
-		if ( ! isset( $this->sections[$priority][$id] ) ) {
-			$this->sections[$priority][$id] = array(
+	public function register_post_options_section( $id, $title ) {
+		if ( ! isset( $this->sections[$id] ) ) {
+			$this->sections[$id] = array(
 				'title' => $title
 			);
 			return true;
@@ -423,16 +425,9 @@ class Post_Options {
 	
 	// Returns true if given section_id exists
 	function section_exists( $section_id ) {
-		foreach ( $this->sections as $priority => $sections ) {
-			foreach ( $sections as $section_key => $section_title ) {
-				if ( $section_id === $section_key )
-					return true;
-			}
-		}
-		
-		return false;
+		return array_key_exists( $section_id, $this->sections );
 	}
-	
+		
 	// Get post option
 	public function get_post_option( $post_id, $option_id ) {
 		return get_post_meta( $post_id, $option_id, true );
@@ -470,6 +465,7 @@ function post_options_test() {
 		'id' => 'an-input',
 		'title' => 'A text input',
 		'section' => 'showing-off',
+		'priority' => 5,
 		'callback' => Post_Options_Fields::text( array(
 			'description' => 'The text in this input is saved and sanitized using the <code>sanitize_title</code> sanitize callback, so try and input some caps, numbers, symbols and spaces.',
 			'sanitize_callback' => 'sanitize_title'
@@ -477,7 +473,7 @@ function post_options_test() {
 	) );
 	
 	// A textarea
-	$post_options->register_post_option( array(
+	/*$post_options->register_post_option( array(
 		'id' => 'a-textarea',
 		'title' => 'A textarea for larger text or perhaps code',
 		'section' => 'showing-off',
@@ -514,12 +510,12 @@ function post_options_test() {
 				'option-3' => 'There is room for a third'
 			)
 		) )
-	) );
+	) );*/
 	
 	// The real-world section
 	
 	// Hide sidebar
-	$post_options->register_post_option( array( 
+	/*$post_options->register_post_option( array( 
 		'id' => 'hide-sidebar',
 		'title' => 'Hide sidebar',
 		'section' => 'real-world',
@@ -594,12 +590,12 @@ function post_options_test() {
 		'title' => 'Did you know?',
 		'section' => 'real-world',
 		'callback' => 'my_callback'
-	) );
+	) );*/
 	
 	// Page Layout
 	$post_options->register_post_option( array(
 		'id' => 'page-layout',
-		'title' => 'Page layout',
+		'title' => 'Custom Callback',
 		'section' => 'real-world',
 		'callback' => 'page_layout_callback'
 	) );
@@ -607,7 +603,7 @@ function post_options_test() {
 	// Mood Example
 	$post_options->register_post_option( array(
 		'id' => 'mood',
-		'title' => 'Mood',
+		'title' => 'Helper Callback',
 		'section' => 'real-world',
 		'callback' => Post_Options_Fields::select( array(
 			'description' => 'How did you feel when writing this post?',
