@@ -31,7 +31,7 @@ Hope this explains it and doesn't make it too crazy to use, but we really had to
 
 ## Usage
 
-Grab the latest stable `post-options-api.x.php` file where `x` is a version number. Memorize that version number since you'll need it later on. Copy the file into an include directory in your WordPress theme or plugin, typically called `inc`. In your theme's `functions.php` file or your plugin source file during the WordPress `init` action, load that file and initialize the two objects. I have shown this in the snippet above, but here you go again:
+Grab the latest stable `post-options-api.x.php` file from the `lib` directory, where `x` is a version number. Memorize that version number since you'll need it later on. Copy the file into an include directory in your WordPress theme or plugin, typically called `inc`. In your theme's `functions.php` file or your plugin source file during the WordPress `init` action, load that file and initialize the two objects. I have shown this in the snippet above, but here you go again:
 
 	function your_function() {
 	
