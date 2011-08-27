@@ -46,14 +46,22 @@ class Post_Options_Fields_1_0_1 {
 
 		$defaults = array(
 			'label' => '',
-			'description' => ''
+			'description' => '',
+			'sanitize_callback' => '',
+			'sanitize_callback_args' => ''
 		);
 		
 		$args = wp_parse_args( $args, $defaults );
+		extract( $args, EXTR_SKIP );
 
 		return array( 
 			'function' => array( __CLASS__, '_checkbox' ), 
-			'args' => $args
+			'sanitize_callback' => $sanitize_callback,
+			'sanitize_callback_args' => $sanitize_callback_args,
+			'args' => array(
+				'label' => $label,
+				'description' => $description
+			)
 		);
 	}
 	public static function _checkbox( $args = array() ) {
@@ -73,7 +81,8 @@ class Post_Options_Fields_1_0_1 {
 		
 		$defaults = array(
 			'description' => '',
-			'sanitize_callback' => ''
+			'sanitize_callback' => '',
+			'sanitize_callback_args' => '',
 		);
 		
 		$args = wp_parse_args( $args, $defaults );
@@ -81,7 +90,8 @@ class Post_Options_Fields_1_0_1 {
 		
 		return array( 
 			'function' => array( __CLASS__, '_text' ), 
-			'sanitize_callback' => $sanitize_callback, 
+			'sanitize_callback' => $sanitize_callback,
+			'sanitize_callback_args' => $sanitize_callback_args,
 			'args' => array( 
 				'description' => $description 
 			) 
@@ -105,7 +115,8 @@ class Post_Options_Fields_1_0_1 {
 		$defaults = array(
 			'description' => '',
 			'rows' => 4,
-			'sanitize_callback' => ''
+			'sanitize_callback' => '',
+			'sanitize_callback_args' => ''
 		);
 		
 		$args = wp_parse_args( $args, $defaults );
@@ -114,6 +125,7 @@ class Post_Options_Fields_1_0_1 {
 		return array( 
 			'function' => array( __CLASS__, '_textarea' ), 
 			'sanitize_callback' => $sanitize_callback, 
+			'sanitize_callback_args' => $sanitize_callback_args,
 			'args' => array( 
 				'description' => $description, 
 				'rows' => $rows 
@@ -140,7 +152,8 @@ class Post_Options_Fields_1_0_1 {
 		$defaults = array(
 			'description' => '',
 			'select_data' => array(),
-			'sanitize_callback' => ''
+			'sanitize_callback' => '',
+			'sanitize_callback_args' => ''
 		);
 		
 		$args = wp_parse_args( $args, $defaults );
@@ -149,6 +162,7 @@ class Post_Options_Fields_1_0_1 {
 		return array( 
 			'function' => array( __CLASS__, '_select' ), 
 			'sanitize_callback' => $sanitize_callback, 
+			'sanitize_callback_args' => $sanitize_callback_args,
 			'args' => array( 
 				'description' => $description,
 				'select_data' => $select_data 
@@ -177,7 +191,8 @@ class Post_Options_Fields_1_0_1 {
 		$defaults = array(
 			'description' => '',
 			'radio_data' => array(),
-			'sanitize_callback' => ''
+			'sanitize_callback' => '',
+			'sanitize_callback_args' => ''
 		);
 		
 		$args = wp_parse_args( $args, $defaults );
@@ -186,6 +201,7 @@ class Post_Options_Fields_1_0_1 {
 		return array(
 			'function' => array( __CLASS__, '_radio' ),
 			'sanitize_callback' => $sanitize_callback,
+			'sanitize_callback_args' => $sanitize_callback_args,
 			'args' => array(
 				'description' => $description,
 				'radio_data' => $radio_data
@@ -305,14 +321,19 @@ class Post_Options_API_1_0_1 {
 								$value = call_user_func( $option['callback']['sanitize_callback'], $value, $option['callback']['sanitize_callback_args'] );
 							else
 								$value = call_user_func( $option['callback']['sanitize_callback'], $value );
-
+						
+						// You can hook into here too
+						$value = apply_filters( 'post_options_update', $value, $option_id, $post_id );
+						
 						// Update the post meta for this option.
 						update_post_meta( $post_id, $option_id, $value );
 
 					} else {
-
-						// Delete the post meta otherwise (for checkboxes)
-						delete_post_meta( $post_id, $option_id );
+						
+						// You can hook here to override the delete action
+						$delete = (bool) apply_filters( 'post_options_delete', true, $option_id, $post_id );
+						if ( $delete )
+							delete_post_meta( $post_id, $option_id );
 					}
 				} // foreach (option)
 			} // foreach (priority, options)
@@ -501,7 +522,7 @@ if ( ! function_exists( 'get_post_options_api') ) {
 	function get_post_options_api( $version ) {
 		$class_name = 'Post_Options_API_' . str_replace( '.', '_', $version );
 		if ( class_exists( $class_name ) )
-			return $class_name::singleton();
+			return call_user_func( array( $class_name, 'singleton' ) );
 		else
 			return new WP_Error( 'post-options-api-init', 'You have requested a non-existing version of the Post Options API.' );
 	}
@@ -512,7 +533,7 @@ if ( ! function_exists( 'get_post_options_api_fields' ) ) {
 	function get_post_options_api_fields( $version ) {
 		$class_name = 'Post_Options_Fields_' . str_replace( '.', '_', $version );
 		if ( class_exists( $class_name ) )
-			return $class_name::singleton();
+			return call_user_func( array( $class_name, 'singleton' ) );
 		else
 			return new WP_Error( 'post-options-api-fields-init', 'You have requested a non-existing version of the Post Options API Fields.' );
 	}

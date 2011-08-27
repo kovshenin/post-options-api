@@ -522,7 +522,7 @@ if ( ! function_exists( 'get_post_options_api') ) {
 	function get_post_options_api( $version ) {
 		$class_name = 'Post_Options_API_' . str_replace( '.', '_', $version );
 		if ( class_exists( $class_name ) )
-			return $class_name::singleton();
+			return call_user_func( array( $class_name, 'singleton' ) );
 		else
 			return new WP_Error( 'post-options-api-init', 'You have requested a non-existing version of the Post Options API.' );
 	}
@@ -533,7 +533,7 @@ if ( ! function_exists( 'get_post_options_api_fields' ) ) {
 	function get_post_options_api_fields( $version ) {
 		$class_name = 'Post_Options_Fields_' . str_replace( '.', '_', $version );
 		if ( class_exists( $class_name ) )
-			return $class_name::singleton();
+			return call_user_func( array( $class_name, 'singleton' ) );
 		else
 			return new WP_Error( 'post-options-api-fields-init', 'You have requested a non-existing version of the Post Options API Fields.' );
 	}
