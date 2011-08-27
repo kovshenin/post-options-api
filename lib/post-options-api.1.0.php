@@ -317,7 +317,7 @@ class Post_Options_API_1_0 {
 	}
 		
 	// The meta box, oh the meta box! Runs for the meta box contents.
-	function _meta_box_post_options( $post, $metabox ) {		
+	function _meta_box_post_options( $post, $metabox ) {
 		$args = $metabox['args'];
 		$section_id = $args['section_id'];
 		

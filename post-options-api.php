@@ -46,22 +46,14 @@ class Post_Options_Fields_1_0_1 {
 
 		$defaults = array(
 			'label' => '',
-			'description' => '',
-			'sanitize_callback' => '',
-			'sanitize_callback_args' => ''
+			'description' => ''
 		);
 		
 		$args = wp_parse_args( $args, $defaults );
-		extract( $args, EXTR_SKIP );
 
 		return array( 
 			'function' => array( __CLASS__, '_checkbox' ), 
-			'sanitize_callback' => $sanitize_callback,
-			'sanitize_callback_args' => $sanitize_callback_args,
-			'args' => array(
-				'label' => $label,
-				'description' => $description
-			)
+			'args' => $args
 		);
 	}
 	public static function _checkbox( $args = array() ) {
@@ -81,8 +73,7 @@ class Post_Options_Fields_1_0_1 {
 		
 		$defaults = array(
 			'description' => '',
-			'sanitize_callback' => '',
-			'sanitize_callback_args' => '',
+			'sanitize_callback' => ''
 		);
 		
 		$args = wp_parse_args( $args, $defaults );
@@ -90,8 +81,7 @@ class Post_Options_Fields_1_0_1 {
 		
 		return array( 
 			'function' => array( __CLASS__, '_text' ), 
-			'sanitize_callback' => $sanitize_callback,
-			'sanitize_callback_args' => $sanitize_callback_args,
+			'sanitize_callback' => $sanitize_callback, 
 			'args' => array( 
 				'description' => $description 
 			) 
@@ -115,8 +105,7 @@ class Post_Options_Fields_1_0_1 {
 		$defaults = array(
 			'description' => '',
 			'rows' => 4,
-			'sanitize_callback' => '',
-			'sanitize_callback_args' => ''
+			'sanitize_callback' => ''
 		);
 		
 		$args = wp_parse_args( $args, $defaults );
@@ -125,7 +114,6 @@ class Post_Options_Fields_1_0_1 {
 		return array( 
 			'function' => array( __CLASS__, '_textarea' ), 
 			'sanitize_callback' => $sanitize_callback, 
-			'sanitize_callback_args' => $sanitize_callback_args,
 			'args' => array( 
 				'description' => $description, 
 				'rows' => $rows 
@@ -152,8 +140,7 @@ class Post_Options_Fields_1_0_1 {
 		$defaults = array(
 			'description' => '',
 			'select_data' => array(),
-			'sanitize_callback' => '',
-			'sanitize_callback_args' => ''
+			'sanitize_callback' => ''
 		);
 		
 		$args = wp_parse_args( $args, $defaults );
@@ -162,7 +149,6 @@ class Post_Options_Fields_1_0_1 {
 		return array( 
 			'function' => array( __CLASS__, '_select' ), 
 			'sanitize_callback' => $sanitize_callback, 
-			'sanitize_callback_args' => $sanitize_callback_args,
 			'args' => array( 
 				'description' => $description,
 				'select_data' => $select_data 
@@ -191,8 +177,7 @@ class Post_Options_Fields_1_0_1 {
 		$defaults = array(
 			'description' => '',
 			'radio_data' => array(),
-			'sanitize_callback' => '',
-			'sanitize_callback_args' => ''
+			'sanitize_callback' => ''
 		);
 		
 		$args = wp_parse_args( $args, $defaults );
@@ -201,7 +186,6 @@ class Post_Options_Fields_1_0_1 {
 		return array(
 			'function' => array( __CLASS__, '_radio' ),
 			'sanitize_callback' => $sanitize_callback,
-			'sanitize_callback_args' => $sanitize_callback_args,
 			'args' => array(
 				'description' => $description,
 				'radio_data' => $radio_data
@@ -321,19 +305,14 @@ class Post_Options_API_1_0_1 {
 								$value = call_user_func( $option['callback']['sanitize_callback'], $value, $option['callback']['sanitize_callback_args'] );
 							else
 								$value = call_user_func( $option['callback']['sanitize_callback'], $value );
-						
-						// You can hook into here too
-						$value = apply_filters( 'post_options_update', $value, $option_id, $post_id );
-						
+
 						// Update the post meta for this option.
 						update_post_meta( $post_id, $option_id, $value );
 
 					} else {
-						
-						// You can hook here to override the delete action
-						$delete = (bool) apply_filters( 'post_options_delete', true, $option_id, $post_id );
-						if ( $delete )
-							delete_post_meta( $post_id, $option_id );
+
+						// Delete the post meta otherwise (for checkboxes)
+						delete_post_meta( $post_id, $option_id );
 					}
 				} // foreach (option)
 			} // foreach (priority, options)
