@@ -350,6 +350,10 @@ class Post_Options_API_1_0_1 {
 
 		$section = $this->sections[$section_id];
 		
+		// Return if no fields defined
+		if ( empty( $this->options[$section_id] ) )
+			return;
+		
 		// Sort the array by keys (priority)
 		ksort( $this->options[$section_id] );
 		
