@@ -430,8 +430,8 @@ class Post_Options_API_1_0_1 {
 		if ( ! isset( $this->sections[$id] ) ) {
 			$this->sections[$id] = array(
 				'title' => $title,
-                'context' => $context,
-                'priority' => $priority
+				'context' => $context,
+				'priority' => $priority
 			);
 			return true;
 		}
