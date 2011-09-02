@@ -267,7 +267,7 @@ class Post_Options_API_1_0_1 {
 		// Adds the metabox for each post type
 		foreach ( $this->post_types as $post_type => $sections )
 			foreach ( $sections as $section_id )
-				add_meta_box( 'post-options-' . $section_id, $this->sections[$section_id]['title'], array( &$this, '_meta_box_post_options' ), $post_type, 'normal', 'default', array( 'section_id' => $section_id ) );
+				add_meta_box( 'post-options-' . $section_id, $this->sections[$section_id]['title'], array( &$this, '_meta_box_post_options' ), $post_type, $this->sections[$section_id]['context'], $this->sections[$section_id]['priority'], array( 'section_id' => $section_id ) );
 			
 		// Register the save_post action (for all post types)
 		add_action( 'save_post', array( &$this, '_save_post' ), 10, 2 );
@@ -426,10 +426,12 @@ class Post_Options_API_1_0_1 {
 	}
 	
 	// Register a post options section
-	public function register_post_options_section( $id, $title ) {
+	public function register_post_options_section( $id, $title, $context = 'advanced', $priority = 'default' ) {
 		if ( ! isset( $this->sections[$id] ) ) {
 			$this->sections[$id] = array(
-				'title' => $title
+				'title' => $title,
+				'context' => $context,
+				'priority' => $priority
 			);
 			return true;
 		}
